@@ -37,3 +37,9 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# other files to ignore
+/output
+/data/cov_scenarios.csv
+/data/cov_scenarios.xlsx
+/old

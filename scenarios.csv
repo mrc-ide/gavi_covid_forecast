@@ -1,0 +1,7 @@
+scenario,iso3c,country,june_2021_cov,dec_2021_cov,dec_2022_cov_global_recov,vacc_scenario
+scenario_12plus,AFG,Afghanistan,0.015,0.2,0.66,Vaccine
+scenario_18plus,AFG,Afghanistan,0.015,0.2,0.51,Vaccine
+scenario_50plus,AFG,Afghanistan,0.015,0.04,0.09,Vaccine
+scenario_12plus,AFG,Afghanistan,0.015,0,0,Counterfactual
+scenario_18plus,AFG,Afghanistan,0.015,0,0,Counterfactual
+scenario_50plus,AFG,Afghanistan,0.015,0,0,Counterfactual
