@@ -35,6 +35,7 @@ library(tidyverse); library(nimue); library(squire)
 #' @param strategy Rollout strategy for covidsim. Must be one of:
 #'   "HCW and Elderly" (default), "HCW, Elderly and "High-Risk", "Elderly", "All"
 #' @param scenario GAVI scenario
+#' @param vacc_scenario vaccine or counterfactual
 #' @param dec_2021_cov coverage by end of 2021
 #' @param dec_2022_cov_global_recov coverage by end of 2022
 #' 
@@ -61,6 +62,9 @@ create_vacc_fit <- function(iso3c,
                             vacc_scenario = "Counterfactual",
                             dec_2021_cov = NA,
                             dec_2022_cov_global_recov = NA) {
+  
+  days_2021 <- as.integer(as.Date("2021-12-31") - as.Date("2021-08-20")) + 1 
+  days_2022 <- as.integer(as.Date("2022-12-31") - as.Date("2022-01-01")) + 1
   
   # get what country this is
   country <- squire::population$country[squire::population$iso3c==iso3c][1]
@@ -139,39 +143,49 @@ create_vacc_fit <- function(iso3c,
   # future betas based on user inputs
   durs <- nimue:::default_durations()
   probs <- nimue:::default_probs()
-  if(length(future_Rt_changes) == 0) {
     future_beta <- nimue::beta_est_infectiousness(dur_IMild = durs$dur_IMild,
                                                   dur_ICase = durs$dur_ICase,
                                                   prob_hosp = probs$prob_hosp,
                                                   rel_infectiousness = rep(1, 17),
-                                                  mixing_matrix = squire:::process_contact_matrix_scaled_age(
-                                                    squire:::get_mixing_matrix(iso3c = iso3c), population$n),
+                                                  mixing_matrix = squire:::process_contact_matrix_scaled_age(squire:::get_mixing_matrix(iso3c = iso3c), population$n),
                                                   R0 = future_Rt)
-    future_beta_changes <- future_beta / tail(betas,1)
-  } else {
-    future_beta_changes <- future_Rt_changes
-  }
-  if(length(future_beta_changes) != length(tt_Rt_changes)) {
-    stop("future_Rt or future_Rt_changes must be same length as tt_Rt_changes")
-  }
+    #future_beta_changes <- future_beta / tail(betas,1)
+  # } else {
+  #   future_beta_changes <- future_Rt_changes
+  # }
+  # if(length(future_beta_changes) != length(tt_Rt_changes)) {
+  #   stop("future_Rt or future_Rt_changes must be same length as tt_Rt_changes")
+  # }
   
-  new_betas <- c(betas, tail(betas,1) * future_beta_changes)
-  tt_s <- c(tt_R0+1, tt_Rt_changes + tail(tt_R0+1,1))
+  new_betas <- c(betas, future_beta)
+  # increase Rt to new level from beginning 2022
+  #tt_s <- c(tt_R0+1, days_2021 + tail(tt_R0+1,1))
+  
+  #instead of instantaneous increase, increase linearly from now until mid-next-year
+  start_day <- tail(tt_R0+1,1)
+  end_day <- days_2021 + tail(tt_R0+1,1) + 180
+  days_vec <- seq(start_day, end_day)
+  
+  future_Rt_vec <- seq(tail(Rts, 1), future_Rt, length.out = length(days_vec)-1)
+  future_betas_vec <- seq(tail(betas, 1), future_beta, length.out = length(days_vec)-1)
+  
+  new_betas <- c(betas, future_betas_vec, rep(tail(future_betas_vec,1), (days_2022-180)))
+  
+  Rt_vec <- c(Rts, future_Rt_vec, rep(tail(future_Rt_vec,1), (days_2022-180)))
+  tt_s <- 1:length(Rt_vec)
   
   # future vaccines
-  if(length(final_coverage) > 0) {
     current_coverage <- sum(max_vaccine) / sum(squire::population$n[squire::population$iso3c==iso3c])
     dec_2021_cov <- max(dec_2021_cov, current_coverage)
     dec_2022_cov_global_recov <- max(dec_2021_cov, dec_2022_cov_global_recov)
     to_give_2021 <- (dec_2021_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
     to_give_2022 <- (dec_2022_cov_global_recov - dec_2021_cov) * sum(squire::population$n[squire::population$iso3c==iso3c])
-    to_give_2021 <- as.integer(to_give_2021 / as.integer(as.Date("2021-12-31") - as.Date("2021-08-06")))
-    to_give_2022 <- as.integer(to_give_2022 / as.integer(as.Date("2022-12-31") - as.Date("2022-01-01")))
+    to_give_2021 <- rep(as.integer(to_give_2021 / days_2021), days_2021)
+    to_give_2022 <- rep(as.integer(to_give_2022 / days_2022), days_2022)
     future_vaccines <- c(to_give_2021, to_give_2022)
-    tt_future_vaccines <- 1
-  }
+  
   new_vaccines <- c(max_vaccine, future_vaccines)
-  tt_vacc <- c(tt_R0+1, tt_future_vaccines + tail(tt_R0+1,1), tt_future_vaccines + tail(tt_R0+1,1) + 1)
+  tt_vacc <- 1:length(new_vaccines)
   
   # Vaccine strategy
   vacc_json <- paste0("https://github.com/mrc-ide/nimue_js/releases/download/v1.0.10/", iso3c, ".json")
@@ -181,9 +195,10 @@ create_vacc_fit <- function(iso3c,
   if("vaccine_coverage" %in% names(json[[1]])) {
     vaccine_uptake <- json[[1]]$vaccine_coverage
   }
-  if("vaccines_available" %in% names(json[[1]])) {
-    vaccine_available <- json[[1]]$vaccines_available
-  }
+  # if("vaccines_available" %in% names(json[[1]])) {
+  #   vaccine_available <- json[[1]]$vaccines_available
+  # }
+  vaccine_available <- 1
   if("vaccine_strategy" %in% names(json[[1]])) {
     strategy <- json[[1]]$vaccine_strategy
   }
@@ -200,6 +215,15 @@ create_vacc_fit <- function(iso3c,
   } else {
     stop('Incorrect strategy. Must be one of "HCW and Elderly", "HCW, Elderly and High-Risk", "Elderly", "All"')
   }
+  
+  # allow children to be vaccinated
+  cov_mat_sub <- tail(cov_mat,1)
+  cov_mat_sub2 <- matrix(rbind(cov_mat_sub, cov_mat_sub, cov_mat_sub), nrow = 3)
+  cov_mat_sub2[3,1] <- vaccine_uptake
+  cov_mat_sub2[2,2] <- vaccine_uptake
+  cov_mat_sub2[1,3] <- vaccine_uptake
+  
+  cov_mat <- matrix(rbind(cov_mat, cov_mat_sub2), nrow = nrow(cov_mat) + 3)
   
   # scale vaccine coverage for availability function
   scale_cov_mat <- function(cov_mat, vaccine_available, pop) {
@@ -296,56 +320,39 @@ create_vacc_fit <- function(iso3c,
   df2 <- data.frame(deaths = diff(rowSums(det_out_vac$output[,D_index,1])),
                     infections = diff(rowSums(det_out_vac$output[,inf_cumu_index,1])),
                     hospitalisations = rowSums(det_out_vac$output[-1,hosp_demand_index,1]),
-                    critical = rowSums(det_out_vac$output[-1,icu_demand_index,1]))
+                    critical = rowSums(det_out_vac$output[-1,icu_demand_index,1]),
+                    vaccines = (rowSums(det_out_vac$output[-1,vacc_cumu_index,1])),
+                    Rt = Rt_vec[-1])
   df2$date <- seq.Date(as.Date(dates[2]), as.Date(dates[1]) + length(df2$deaths), 1)
   df <- dplyr::left_join(df2, df, by = "date")
   df$scenario <- scenario
   df$vacc_scenario <- vacc_scenario
   df$iso3c <- iso3c
   df$Rt_current <- tail(Rts, 1)
+  df$population <- sum(population$n)
+  df$current_cov <- current_coverage
+  df$future_Rt <- future_Rt
   
   # summary of deaths from now until end-2022
   deaths_total <- df %>%
-    filter(date > as.Date("2021-08-06"),
+    filter(date > as.Date("2021-08-20"),
            date <= as.Date("2022-12-31")) %>%
     summarise(total_deaths = round(sum(deaths)),
               total_infections = round(sum(infections)),
               total_hospitalisations = round(sum(hospitalisations)),
               total_critical = round(sum(critical)))
   
+  total_vaccines <- df %>%
+    filter(date == as.Date("2022-12-31")) %>%
+    select(vaccines)
+  
   df$total_deaths <- deaths_total$total_deaths
   df$total_infections <- deaths_total$total_infections
   df$total_hospitalisations <- deaths_total$total_hospitalisations
+  df$total_vaccines <- total_vaccines$vaccines
   
-  df <- nest(df, timeseries = c(date, deaths, infections, hospitalisations, critical, real))
-  
-  # make simple plot for checking deaths
-  plot <- ggplot(df, aes(date, real)) +
-    geom_bar(aes(x = as.Date(date), y = real, fill = "Reported"),
-             stat = "identity",
-             fill = "#c59e96") +
-    geom_line(aes(date, zoo::rollmean(real, 7, na.pad = TRUE), color = "7-day Weekly Mean"), lwd = 1) +
-    geom_line(aes(date, deaths, color = "Deaths"), lwd = 1) +
-    ylab("Deaths") +
-    scale_fill_manual(values = "#c59e96") +
-    scale_color_manual(values = c("black", "#3f8ea7",  "#3f8ea7", "#3f8ea7")) +
-    xlab("") +
-    scale_y_continuous(expand = c(0,0)) +
-    ggpubr::theme_pubclean() +
-    theme(axis.line = element_line(), legend.title = element_blank(), legend.key = element_blank()) +
-    ggtitle(iso3c)
-  
-  
-  #return(list("plot" = plot, "df" = df, "event_summary" = deaths_total))
-  return(df)
+  df <- nest(df, timeseries = c(date, deaths, infections, hospitalisations, critical, vaccines, real, Rt))
+
+    return(df)
 }
-
-
-# default GB
-gbr <- create_vacc_fit("AFG",
-                       forecast = as.integer(as.Date("2022-12-31") - as.Date("2021-08-06")),
-                       dec_2021_cov = 0.2,
-                       dec_2022_cov_global_recov = 0.2)
-
-gbr$plot
 

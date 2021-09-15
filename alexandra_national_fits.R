@@ -196,7 +196,16 @@ create_vacc_fit <- function(iso3c,
   } else {
     stop('Incorrect strategy. Must be one of "HCW and Elderly", "HCW, Elderly and High-Risk", "Elderly", "All"')
   }
-
+  
+  # allow children to be vaccinated
+  cov_mat_sub <- tail(cov_mat,1)
+  cov_mat_sub2 <- matrix(rbind(cov_mat_sub, cov_mat_sub, cov_mat_sub), nrow = 3)
+  cov_mat_sub2[3,1] <- vaccine_uptake
+  cov_mat_sub2[2,2] <- vaccine_uptake
+  cov_mat_sub2[1,3] <- vaccine_uptake
+  
+  cov_mat <- matrix(rbind(cov_mat, cov_mat_sub2))
+  
   # scale vaccine coverage for availability function
   scale_cov_mat <- function(cov_mat, vaccine_available, pop) {
 
