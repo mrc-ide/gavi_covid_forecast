@@ -1,0 +1,4 @@
+scenario,iso3c,country,dec_2021_cov,dec_2022_cov_global_recov
+scenario_12plus,AFG,Afghanistan,0.2,0.66
+scenario_18plus,AFG,Afghanistan,0.2,0.51
+scenario_50plus,AFG,Afghanistan,0.04,0.09

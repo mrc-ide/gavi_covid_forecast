@@ -45,7 +45,7 @@ d2 <- d2 %>%
 # Dataframe: trajectories
 
 df1 <- d2 %>%  
-  mutate(vacc_scenario = if_else(date < "2021-08-20", "Fitted", vacc_scenario)) %>%
+  mutate(vacc_scenario = if_else(date < "2021-11-16", "Fitted", vacc_scenario)) %>% #last date with "deaths" in json
   unique() %>%
   mutate(scenario = if_else(vacc_scenario == "Fitted", "Fitted", scenario),
          scenario = if_else(vacc_scenario == "Counterfactual", "Counterfactual", scenario)) %>%
@@ -80,7 +80,7 @@ for(i in seq_along(iso3c_list$iso3c)){
     geom_point(aes(x = as.Date(date), y = real),
                col = "darkgrey") +
     geom_line(aes(x = as.Date(date), y = deaths, linetype = vacc_scenario, col = scenario), size = lw) +
-    geom_vline(xintercept = as.Date("2021-08-20"), linetype = "dashed") +
+    geom_vline(xintercept = as.Date("2021-11-16"), linetype = "dashed") +
     facet_wrap( ~ `future_Rt`, labeller = label_both, nrow = 2) +
     labs(x = "Time", y = "Deaths per day", col = "Allocation") +
     scale_color_manual(values = c("black", "black", col1, col2, col4)) +
@@ -109,7 +109,7 @@ for(i in seq_along(iso3c_list$iso3c)){
   # plot vaccines delivered over time
   p2 <- ggplot(filter(df2, iso3c == iso3c_list$iso3c[i], vacc_scenario == "Vaccine")) +
     geom_line(aes(x = as.Date(date), y = vaccines/population, col = scenario), size = lw) +
-    geom_vline(xintercept = as.Date("2021-08-20"), linetype = "dashed") +
+    geom_vline(xintercept = as.Date("2021-11-16"), linetype = "dashed") + 
     labs(x = "Time", y = "Proportion vaccinated", col = "Allocation") +
     scale_linetype_manual(values = c("dashed", "solid")) +
     scale_color_manual(values = c(col1, col2, col4)) +
@@ -126,7 +126,7 @@ for(i in seq_along(iso3c_list$iso3c)){
   # plot R0
   p3 <- ggplot(filter(df3, iso3c == iso3c_list$iso3c[i])) +
     geom_line(aes(x = as.Date(date), y = Rt, col = factor(future_Rt)), size = lw) +
-    geom_vline(xintercept = as.Date("2021-08-20"), linetype = "dashed") +
+    geom_vline(xintercept = as.Date("2021-11-16"), linetype = "dashed") +
     labs(x = "Time", y = "Rt", col = "Rt scenario") +
     scale_color_manual(values = c("darkgrey", col5)) +
     scale_linetype_manual(values = c("dashed", "solid")) +
@@ -142,7 +142,7 @@ for(i in seq_along(iso3c_list$iso3c)){
   plots[[i]] <- p3 / p2 / p1 + plot_annotation(title = iso3c_list$country[i], theme = theme(plot.title = element_text(size = 18))) +  plot_layout(guides = 'collect', heights = unit(c(4, 4, 8), c('cm')))
 }
 
-pdf("GAVI_plots_covid_Aug21_v3.pdf", width = 11, height = 10)
+pdf("GAVI_plots_covid_1.pdf", width = 11, height = 10)
 for (i in seq_along(iso3c_list$iso3c)){
   print(plots[[i]])
 }

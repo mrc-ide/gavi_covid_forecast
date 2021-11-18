@@ -45,7 +45,7 @@ create_vacc_fit <- function(iso3c,
                             country = NULL,
                             inf_eff = 0.9,
                             dis_eff = 0.96,
-                            forecast = 120,
+                            forecast = 411,
                             dose_factor = 1,
                             max_vaccine = NULL,
                             vaccine_uptake = 0.8,
@@ -63,7 +63,7 @@ create_vacc_fit <- function(iso3c,
                             dec_2021_cov = NA,
                             dec_2022_cov_global_recov = NA) {
   
-  days_2021 <- as.integer(as.Date("2021-12-31") - as.Date("2021-08-20")) + 1 
+  days_2021 <- as.integer(as.Date("2021-12-31") - as.Date("2021-11-16")) + 1 
   days_2022 <- as.integer(as.Date("2022-12-31") - as.Date("2022-01-01")) + 1
   
   # get what country this is
@@ -335,7 +335,7 @@ create_vacc_fit <- function(iso3c,
   
   # summary of deaths from now until end-2022
   deaths_total <- df %>%
-    filter(date > as.Date("2021-08-20"),
+    filter(date > as.Date("2021-11-16"),
            date <= as.Date("2022-12-31")) %>%
     summarise(total_deaths = round(sum(deaths)),
               total_infections = round(sum(infections)),
