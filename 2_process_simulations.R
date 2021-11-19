@@ -83,8 +83,8 @@ for(i in seq_along(iso3c_list$iso3c)){
     geom_vline(xintercept = as.Date("2021-11-16"), linetype = "dashed") +
     facet_wrap( ~ `future_Rt`, labeller = label_both, nrow = 2) +
     labs(x = "Time", y = "Deaths per day", col = "Allocation") +
-    scale_color_manual(values = c("black", "black", col1, col2, col4)) +
-    scale_linetype_manual(values = c("dashed", "solid", "solid")) +
+    scale_color_manual(values = c("black", "black",col1, col2, col4)) +  #counterfactual, fitted, scenario_12plus, scenario_18plus, scenario_50plus
+    scale_linetype_manual(values = c("dashed", "solid", "solid")) + #counterfactual=dashed line
     scale_y_continuous(labels = comma)+
     theme_bw() +
     theme(strip.background = element_rect(fill = NA),
@@ -142,7 +142,7 @@ for(i in seq_along(iso3c_list$iso3c)){
   plots[[i]] <- p3 / p2 / p1 + plot_annotation(title = iso3c_list$country[i], theme = theme(plot.title = element_text(size = 18))) +  plot_layout(guides = 'collect', heights = unit(c(4, 4, 8), c('cm')))
 }
 
-pdf("GAVI_plots_covid_1.pdf", width = 11, height = 10)
+pdf("GAVI_plots_covid_4.pdf", width = 11, height = 10)
 for (i in seq_along(iso3c_list$iso3c)){
   print(plots[[i]])
 }
