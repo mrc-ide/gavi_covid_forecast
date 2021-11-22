@@ -310,7 +310,7 @@ if(endpoint=="endDec2022"){
   # NIMUE RUN
   det_out_vac <- nimue::run(
     country = country,
-    dur_R = 365, #make sure this matches duration of natural immunity in jsons (either 1 or 2 years)
+    dur_R = 365*2, #make sure this matches duration of natural immunity in jsons (either 1 or 2 years)
     use_dde = TRUE,
     # all changes to Rt are set here using beta and not R0 and R0 being set below is ignored internally
     beta_set = new_betas,
