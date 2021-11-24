@@ -64,7 +64,7 @@ df2 <- d2 %>%
 df3 <- d2 %>%
   select(scenario, vacc_scenario, iso3c, future_Rt, date, Rt) %>%
   filter(vacc_scenario == "Vaccine",
-         scenario == "scenario_12plus")
+         scenario == "scenario_18plus")
 
 ###########################################################################
 # Create plots
@@ -142,7 +142,7 @@ for(i in seq_along(iso3c_list$iso3c)){
   plots[[i]] <- p3 / p2 / p1 + plot_annotation(title = iso3c_list$country[i], theme = theme(plot.title = element_text(size = 18))) +  plot_layout(guides = 'collect', heights = unit(c(4, 4, 8), c('cm')))
 }
 
-pdf("GAVI_plots_covid_4.pdf", width = 11, height = 10)
+pdf("GAVI_plots_covid_1.pdf", width = 11, height = 10)
 for (i in seq_along(iso3c_list$iso3c)){
   print(plots[[i]])
 }

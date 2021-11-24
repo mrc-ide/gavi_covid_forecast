@@ -49,7 +49,7 @@ create_vacc_fit <- function(iso3c,
                             forecast = NA,#411,
                             dose_factor = 1,
                             max_vaccine = NULL,
-                            vaccine_uptake = 0.8,
+                            vaccine_uptake = 0.8, #cannot change here
                             vaccine_available = 0.95,
                             vaccine_durability = 446, #make sure duration of vaccine immunity matches jsons
                             risk_proportion = 0.1,
@@ -58,7 +58,7 @@ create_vacc_fit <- function(iso3c,
                             tt_Rt_changes = numeric(0),
                             future_vaccines = numeric(0),
                             tt_future_vaccines = numeric(0),
-                            strategy = "HCW, Elderly and High-Risk",
+                            strategy = "HCW, Elderly and High-Risk", 
                             scenario = NA,
                             vacc_scenario = NA, #"Counterfactual",
                             june_2022_cov = NA, #dec_2021_cov
@@ -69,7 +69,7 @@ create_vacc_fit <- function(iso3c,
   days_mid2022 <- as.integer(as.Date("2022-06-30") - as.Date("2021-11-16")) + 1
   days_2022 <- as.integer(as.Date("2022-12-31") - as.Date("2022-01-01")) + 1
   days_end2022 <- as.integer(as.Date("2022-12-31") - as.Date("2021-11-16")) + 1
-  endpoint <- "endJune2022" #set as endDec2022 or endJune2022
+  endpoint <- "endDec2022" #set as endDec2022 or endJune2022
   
     
   # get what country this is
@@ -202,7 +202,7 @@ if(endpoint=="endDec2022"){
     }else{ #endpoint=="endJune2022"
     june_2022_cov <- max(june_2022_cov, current_coverage)
     to_give_mid2022 <- (june_2022_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
-    to_give_mid2022 <- rep(as.integer(to_give_mid2022 / days_mid2022), days_mid2022)
+    to_give_mid2022 <- rep(as.integer(to_give_mid2022 / days_mid2022), days_end2022)
     future_vaccines <- to_give_mid2022}
     
     
