@@ -36,8 +36,9 @@ library(tidyverse); library(nimue); library(squire)
 #'   "HCW and Elderly" (default), "HCW, Elderly and "High-Risk", "Elderly", "All"
 #' @param scenario GAVI scenario
 #' @param vacc_scenario vaccine or counterfactual
-#' @param dec_2021_cov coverage by end of 2021
+#' @param june_2022_cov coverage by end of june 2022
 #' @param dec_2022_cov_global_recov coverage by end of 2022
+#' @param endpoint endpoint for coverage target either "endDec2022" or "endJune2022"
 #' 
 #' @export
 create_vacc_fit <- function(iso3c,
@@ -45,27 +46,32 @@ create_vacc_fit <- function(iso3c,
                             country = NULL,
                             inf_eff = 0.9,
                             dis_eff = 0.96,
-                            forecast = 120,
+                            forecast = NA,#411,
                             dose_factor = 1,
                             max_vaccine = NULL,
-                            vaccine_uptake = 0.8,
+                            vaccine_uptake = 0.8, #cannot change here
                             vaccine_available = 0.95,
-                            vaccine_durability = 5000,
+                            vaccine_durability = 446, #make sure duration of vaccine immunity matches jsons
                             risk_proportion = 0.1,
                             future_Rt = numeric(0),
                             future_Rt_changes = numeric(0),
                             tt_Rt_changes = numeric(0),
                             future_vaccines = numeric(0),
                             tt_future_vaccines = numeric(0),
-                            strategy = "HCW, Elderly and High-Risk",
+                            strategy = "HCW, Elderly and High-Risk", 
                             scenario = NA,
-                            vacc_scenario = "Counterfactual",
-                            dec_2021_cov = NA,
-                            dec_2022_cov_global_recov = NA) {
+                            vacc_scenario = NA, #"Counterfactual",
+                            june_2022_cov = NA, #dec_2021_cov
+                            dec_2022_cov_global_recov = NA,
+                            endpoint = NA) {
   
-  days_2021 <- as.integer(as.Date("2021-12-31") - as.Date("2021-08-20")) + 1 
+  days_2021 <- as.integer(as.Date("2021-12-31") - as.Date("2021-11-16")) + 1 
+  days_mid2022 <- as.integer(as.Date("2022-06-30") - as.Date("2021-11-16")) + 1
   days_2022 <- as.integer(as.Date("2022-12-31") - as.Date("2022-01-01")) + 1
+  days_end2022 <- as.integer(as.Date("2022-12-31") - as.Date("2021-11-16")) + 1
+  endpoint <- "endDec2022" #set as endDec2022 or endJune2022
   
+    
   # get what country this is
   country <- squire::population$country[squire::population$iso3c==iso3c][1]
   
@@ -161,7 +167,7 @@ create_vacc_fit <- function(iso3c,
   # increase Rt to new level from beginning 2022
   #tt_s <- c(tt_R0+1, days_2021 + tail(tt_R0+1,1))
   
-  #instead of instantaneous increase, increase linearly from now until mid-next-year
+  #instead of instantaneous increase, increase R0 linearly from now until mid-next-year (keep the same?)
   start_day <- tail(tt_R0+1,1)
   end_day <- days_2021 + tail(tt_R0+1,1) + 180
   days_vec <- seq(start_day, end_day)
@@ -169,21 +175,37 @@ create_vacc_fit <- function(iso3c,
   future_Rt_vec <- seq(tail(Rts, 1), future_Rt, length.out = length(days_vec)-1)
   future_betas_vec <- seq(tail(betas, 1), future_beta, length.out = length(days_vec)-1)
   
-  new_betas <- c(betas, future_betas_vec, rep(tail(future_betas_vec,1), (days_2022-180)))
+  if(endpoint=="endDec2022"){
+  new_betas <- c(betas, future_betas_vec, rep(tail(future_betas_vec,1), (days_2022-180)))  
+  Rt_vec <- c(Rts, future_Rt_vec, rep(tail(future_Rt_vec,1), (days_2022-180)))   
+  }else{ #endpoint=="endJune2022" (don't need to go on until end of year)
+    new_betas <- c(betas, future_betas_vec, rep(tail(future_Rt_vec,1), 1))  
+    Rt_vec <- c(Rts, future_Rt_vec, rep(tail(future_Rt_vec,1), 1))   
+  }
   
-  Rt_vec <- c(Rts, future_Rt_vec, rep(tail(future_Rt_vec,1), (days_2022-180)))
   tt_s <- 1:length(Rt_vec)
   
   # future vaccines
     current_coverage <- sum(max_vaccine) / sum(squire::population$n[squire::population$iso3c==iso3c])
-    dec_2021_cov <- max(dec_2021_cov, current_coverage)
-    dec_2022_cov_global_recov <- max(dec_2021_cov, dec_2022_cov_global_recov)
-    to_give_2021 <- (dec_2021_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
-    to_give_2022 <- (dec_2022_cov_global_recov - dec_2021_cov) * sum(squire::population$n[squire::population$iso3c==iso3c])
-    to_give_2021 <- rep(as.integer(to_give_2021 / days_2021), days_2021)
-    to_give_2022 <- rep(as.integer(to_give_2022 / days_2022), days_2022)
-    future_vaccines <- c(to_give_2021, to_give_2022)
-  
+    #june_2022_cov <- max(june_2022_cov, current_coverage)
+    #dec_2022_cov_global_recov <- max(june_2022_cov, dec_2022_cov_global_recov)
+    #to_give_2021 <- (june_2022_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
+    #to_give_mid2022 <- (june_2022_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
+    #to_give_2021 <- rep(as.integer(to_give_2021 / days_2021), days_2021)
+    #to_give_mid2022 <- rep(as.integer(to_give_mid2022 / days_2021), days_2021)
+    #future_vaccines <- c(to_give_mid2022, to_give_end2022)
+if(endpoint=="endDec2022"){
+    dec_2022_cov_global_recov <- max(dec_2022_cov_global_recov, current_coverage)
+    to_give_end2022 <- (dec_2022_cov_global_recov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
+    to_give_end2022 <- rep(as.integer(to_give_end2022 / days_end2022), days_end2022)
+    future_vaccines <- to_give_end2022
+    }else{ #endpoint=="endJune2022"
+    june_2022_cov <- max(june_2022_cov, current_coverage)
+    to_give_mid2022 <- (june_2022_cov - current_coverage) * sum(squire::population$n[squire::population$iso3c==iso3c])
+    to_give_mid2022 <- rep(as.integer(to_give_mid2022 / days_mid2022), days_end2022)
+    future_vaccines <- to_give_mid2022}
+    
+    
   new_vaccines <- c(max_vaccine, future_vaccines)
   tt_vacc <- 1:length(new_vaccines)
   
@@ -288,7 +310,7 @@ create_vacc_fit <- function(iso3c,
   # NIMUE RUN
   det_out_vac <- nimue::run(
     country = country,
-    dur_R = 365,
+    dur_R = 365*2, #make sure this matches duration of natural immunity in jsons (either 1 or 2 years)
     use_dde = TRUE,
     # all changes to Rt are set here using beta and not R0 and R0 being set below is ignored internally
     beta_set = new_betas,
@@ -335,16 +357,22 @@ create_vacc_fit <- function(iso3c,
   
   # summary of deaths from now until end-2022
   deaths_total <- df %>%
-    filter(date > as.Date("2021-08-20"),
+    filter(date > as.Date("2021-11-16"),
            date <= as.Date("2022-12-31")) %>%
     summarise(total_deaths = round(sum(deaths)),
               total_infections = round(sum(infections)),
               total_hospitalisations = round(sum(hospitalisations)),
               total_critical = round(sum(critical)))
   
+  if(endpoint=="endDec2022"){
   total_vaccines <- df %>%
     filter(date == as.Date("2022-12-31")) %>%
-    select(vaccines)
+    select(vaccines)}
+  else{ #endpoint==endJune2022
+    total_vaccines <- df %>%
+      filter(date == as.Date("2022-06-30")) %>%
+      select(vaccines) 
+  }
   
   df$total_deaths <- deaths_total$total_deaths
   df$total_infections <- deaths_total$total_infections
