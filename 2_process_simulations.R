@@ -7,11 +7,11 @@ library(countrycode)
 ##############################################################################
 # plotting stuff
 
-col1 <- "#5da0b5"
-col2 <- "#c59e96"
-col3 <- "#747473"
-col4 <- "#5c8e72"
-col5 <- "#2a73bb" # Reff color
+col1 <- "#5da0b5" #blue
+col2 <- "#c59e96" #pink
+col3 <- "#747473" #black
+col4 <- "#5c8e72" #green
+col5 <- "#2a73bb" # Reff color (blue)
 
 lw <- 1
 
